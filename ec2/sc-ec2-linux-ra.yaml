@@ -1,6 +1,14 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Service Catalog: EC2 Reference Architecture(fdp-1oc5f3ula).'
+Transform: Explode
 Metadata:
+  cfn-lint:
+    config:
+      ignore_checks:
+        - E3001
+        - E3012
+        - W7001
+        - W2001
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
@@ -8,6 +16,7 @@ Metadata:
         Parameters:
           - KeyPair
           - PrivateNetwork
+          - Ports
       - Label:
           default: Linux Instance Configuration
         Parameters:
@@ -18,6 +27,8 @@ Metadata:
         default: Key Pair
       PrivateNetwork:
         default: Use private network?
+      Ports:
+        default: Ports
       EC2InstanceType:
         default: EC2 Instance Type
       LinuxDistribution:
@@ -36,6 +47,10 @@ Parameters:
     AllowedValues:
       - 'true'
       - 'false'
+  Ports:
+    Type: CommaDelimitedList
+    Description: Ports to open (only applicable if not on private network)
+    Default: "[]"
   EC2InstanceType:
     AllowedValues:
       - c4.large
@@ -246,16 +261,17 @@ Resources:
           IpProtocol: '-1'
   PublicSubnetSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
+    ExplodeParam: Ports
     Condition: UsePublicSubnet
     Properties:
-      GroupDescription: Allow SSH to port 22
+      GroupDescription: Open ports to public internet
       VpcId: !ImportValue
         'Fn::Sub': '${AWS::Region}-internalpoolvpc-VPCId'
       SecurityGroupIngress:
         - Description: allow SSH
           IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
+          FromPort: "!Explode Port"
+          ToPort: "!Explode Port"
           CidrIp: '0.0.0.0/0'
         - Description: allow icmp
           IpProtocol: icmp
@@ -279,8 +295,8 @@ Resources:
           'Fn::Sub': '${AWS::Region}-internalpoolvpc-PublicSubnet'
       SecurityGroupIds: !If
         - UsePrivateSubnet
-        - [!Ref PrivateSubnetSecurityGroup]
-        - [!Ref PublicSubnetSecurityGroup]
+        - [!GetAtt 'PrivateSubnetSecurityGroup.GroupId']
+        - [!GetAtt 'PublicSubnetSecurityGroup.GroupId']
       KeyName: !Ref 'KeyPair'
       IamInstanceProfile: !Ref 'PatchingInstanceProfile'
       Tags:
