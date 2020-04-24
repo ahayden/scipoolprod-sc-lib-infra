@@ -1,0 +1,17 @@
+# A service-linked role is a unique type of IAM role that is linked directly to an AWS service.
+# Service-linked roles are predefined by the service and include all the permissions that the
+# service requires to call other AWS services on your behalf.
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  Makes service-linked role available for the SSM service
+Resources:
+  AWSServiceRoleForSSM:
+    Type: "AWS::IAM::ServiceLinkedRole"
+    Properties:
+      AWSServiceName: "ssm.amazonaws.com"
+      Description: "SLR for SSM"
+Outputs:
+  AWSServiceRoleForSSM:
+    Value: !Ref AWSServiceRoleForSSM
+    Export:
+      Name: !Sub '${AWS::Region}-${AWS::StackName}-AWSServiceRoleForSSM'
